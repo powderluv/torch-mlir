@@ -28,6 +28,8 @@ target_link_libraries(TorchMLIRJITIRImporter
   torch_python
 )
 
+add_dependencies(TorchMLIRJITIRImporter libtorch)
+
 # On static Python builds, there may not be Python libraries to link against
 # (they will late bind at runtime from the executable). We have to condition
 # this because in that case it is set to NOTFOUND and CMake will consider
@@ -49,5 +51,4 @@ set_target_properties(TorchMLIRJITIRImporter PROPERTIES
   )
 mlir_python_setup_extension_rpath(TorchMLIRJITIRImporter)
 
-torch_mlir_python_target_compile_options(TorchMLIRJITIRImporter)
 mlir_check_all_link_libraries(TorchMLIRJITIRImporter)

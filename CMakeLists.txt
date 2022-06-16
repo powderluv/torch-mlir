@@ -25,6 +25,10 @@ project(torch-mlir LANGUAGES CXX C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 14)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/python/torch_mlir/dialects/torch/importer/jit_ir/cmake/modules")
+
+include(pytorch)
+
 macro(torch_mlir_add_llvm_external_project name identifier location)
   message(STATUS "Adding LLVM external project ${name} (${identifier}) -> ${location}")
   if(NOT EXISTS "${location}/CMakeLists.txt")
@@ -146,6 +150,7 @@ add_subdirectory(tools)
 
 add_custom_target(check-torch-mlir-all)
 add_dependencies(check-torch-mlir-all
+  pytorch
   check-torch-mlir
   check-torch-mlir-dialects
   )

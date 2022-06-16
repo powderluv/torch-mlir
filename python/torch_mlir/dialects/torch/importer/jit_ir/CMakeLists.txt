@@ -2,12 +2,10 @@
 # Setup PyTorch
 #-------------------------------------------------------------------------------
 
+message("Setting up Eager mode Module PATH: ${CMAKE_MODULE_PATH}")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
-include(TorchMLIRPyTorch)
-TorchMLIRProbeForPyTorchInstall()
-find_package(Torch 1.8 REQUIRED)
-
-TorchMLIRConfigurePyTorch()
+message("Updated Module PATH: ${CMAKE_MODULE_PATH}")
+include(pytorch)
 
 #-------------------------------------------------------------------------------
 # Subdirectories

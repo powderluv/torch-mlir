@@ -2,11 +2,6 @@
 # Setup PyTorch
 #-------------------------------------------------------------------------------
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
-find_package(Torch 1.8 REQUIRED)
-
-TorchMLIRConfigurePyTorch()
-
 #-------------------------------------------------------------------------------
 # Subdirectories
 #-------------------------------------------------------------------------------
