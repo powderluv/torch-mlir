@@ -5,8 +5,11 @@ set -xeu -o pipefail
 SRC_ROOT="$( cd "$(dirname "$0")" ; pwd -P)/.."
 PYTORCH_ROOT=${PYTORCH_ROOT:-$SRC_ROOT/externals/pytorch}
 PYTORCH_INSTALL_PATH=${PYTORCH_INSTALL_PATH:-$SRC_ROOT/libtorch}
+PYTORCH_REPO="${PYTORCH_REPO:-pytorch/pytorch}"
 PYTORCH_BRANCH="${PYTORCH_BRANCH:-master}"
-LIBTORCH_VARIANT="${LIBTORCH_VARIANT:-shared}"
+LIBTORCH_VARIANT="${LIBTORCH_VARIANT:-cxx11-abi-shared}"
+LIBTORCH_SRC_BUILD="${LIBTORCH_SRC_BUILD:-OFF}"
+LIBTORCH_CACHE="${LIBTORCH_CACHE:-OFF}"
 PT_C_COMPILER="${PT_C_COMPILER:-clang}"
 PT_CXX_COMPILER="${PT_CXX_COMPILER:-clang++}"
 CMAKE_OSX_ARCHITECTURES="${CMAKE_OSX_ARCHITECTURES:-arm64;x86_64}"
@@ -23,6 +26,7 @@ NC='\033[0m'
 
 echo "SRC_ROOT=${SRC_ROOT}"
 echo "PYTORCH_ROOT=${PYTORCH_ROOT}"
+echo "PYTORCH_REPO=${PYTORCH_REPO}"
 echo "PYTORCH_BRANCH=${PYTORCH_BRANCH}"
 echo "LIBTORCH_VARIANT=${LIBTORCH_VARIANT}"
 echo "LIBTORCH_SRC_BUILD=${LIBTORCH_SRC_BUILD}"
@@ -36,7 +40,8 @@ if [[ "$LIBTORCH_VARIANT" == *"cxx11-abi"* ]]; then
   echo _GLIBCXX_USE_CXX11_ABI=1
   export _GLIBCXX_USE_CXX11_ABI=1
   CXX_ABI=1
-else
+elif [[ $(uname -s) = 'Linux' ]]; then
+  echo "cxx11-abi is not set and on Linux so setting _GLIBCXX_USE_CXX11_ABI=0"
   echo _GLIBCXX_USE_CXX11_ABI=0
   export _GLIBCXX_USE_CXX11_ABI=0
   CXX_ABI=0
@@ -112,7 +117,7 @@ fi
 
 checkout_pytorch() {
   if [[ ! -d "$PYTORCH_ROOT" ]]; then
-    git clone --depth 1 --single-branch --branch "${PYTORCH_BRANCH}" https://github.com/pytorch/pytorch "$PYTORCH_ROOT"
+    git clone --depth 1 --single-branch --branch "${PYTORCH_BRANCH}" https://github.com/"$PYTORCH_REPO" "$PYTORCH_ROOT"
   fi
   cd "$PYTORCH_ROOT"
   git reset --hard HEAD
@@ -156,10 +161,8 @@ build_pytorch() {
   BUILD_CAFFE2_OPS=OFF \
   BUILD_SHARED_LIBS=${BUILD_SHARED_LIBS} \
   BUILD_TEST=OFF \
-  CC=${PT_C_COMPILER} \
   CMAKE_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=${CXX_ABI}" \
   CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} \
-  CXX=${PT_CXX_COMPILER} \
   INTERN_BUILD_ATEN_OPS=OFF \
   INTERN_DISABLE_ONNX=ON \
   INTERN_USE_EIGEN_BLAS=ON \
