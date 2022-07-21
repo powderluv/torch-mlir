@@ -73,6 +73,7 @@ function run_in_docker() {
 
   local orig_path="$PATH"
 
+  install_clang
   # Build phase.
   for package in $packages; do
     echo "******************** BUILDING PACKAGE ${package} ********************"
@@ -86,7 +87,6 @@ function run_in_docker() {
       echo ":::: Python version $(python --version)"
       case "$package" in
         torch-mlir)
-          install_clang
           clean_wheels torch_mlir $python_version
           build_torch_mlir $python_version
           run_audit_wheel torch_mlir $python_version
@@ -101,8 +101,11 @@ function run_in_docker() {
 }
 
 function install_clang() {
-  yum install -y llvm-toolset ninja-build
+  yum install -y llvm-toolset
   clang --version
+  #curl -LJO https://github.com/ninja-build/ninja/releases/download/v1.11.0/ninja-linux.zip
+  #unzip ninja-linux.zip
+  #mv ninja /usr/bin/
 }
 
 function build_torch_mlir() {

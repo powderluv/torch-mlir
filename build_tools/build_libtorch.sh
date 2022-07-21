@@ -19,6 +19,15 @@ PIP_BIN="${TORCH_MLIR_PIP_VERSION:-pip3}"
 CMAKE_C_COMPILER_LAUNCHER="${CMAKE_C_COMPILER_LAUNCHER:-""}"
 CMAKE_CXX_COMPILER_LAUNCHER="${CMAKE_CXX_COMPILER_LAUNCHER:-""}"
 
+PYTHON_EXECUTABLE=${PYTHON_BIN}
+CMAKE_PREFIX_PATH=`${PYTHON_BIN} -c "from sysconfig import get_paths as gp; print(gp()[\"include\"])"`
+PYTHON_INCLUDE_DIR=`${PYTHON_BIN} -c "from sysconfig import get_paths as gp; print(gp()[\"include\"])"`
+PYTHON_SITE_DIR=`${PYTHON_BIN} -c "import sysconfig; print(sysconfig.get_path('purelib'))"`
+NUMPY_INCLUDE_DIR=${PYTHON_SITE_DIR}/numpy/core/include
+PYTHON_LIB_DIR=`${PYTHON_BIN} -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))"`
+PYTHON_LDLIB=`${PYTHON_BIN} -c "import sysconfig; print(sysconfig.get_config_var('LDLIBRARY'))"`
+PYTHON_LIBRARY=${PYTHON_LIB_DIR}/${PYTHON_LDLIB}
+
 Red='\033[0;31m'
 Green='\033[0;32m'
 Yellow='\033[1;33m'
@@ -127,6 +136,13 @@ checkout_pytorch() {
   done
   # setup.py will try to re-fetch
   sed -i.bak -E 's/^[[:space:]]+check_submodules()/#check_submodules()/g' setup.py
+
+  # Require ninja inside the PyTorch pip install wheel isolation
+  sed -i.bak -E 's/requires \= \[/requires = [\n    "ninja",/g' pyproject.toml
+
+  TORCH_VERSION=`cat ${PYTORCH_ROOT}/version.txt`
+  TORCH_GIT_REV=`git --git-dir ${PYTORCH_ROOT}/.git rev-parse --short HEAD`
+  TORCH_BUILD_VERSION=${TORCH_VERSION}+git${TORCH_GIT_REV}
 }
 
 build_pytorch() {
@@ -158,34 +174,28 @@ build_pytorch() {
     fi
   fi
 
-  BUILD_CAFFE2_OPS=OFF \
-  BUILD_SHARED_LIBS=${BUILD_SHARED_LIBS} \
-  BUILD_TEST=OFF \
-  CMAKE_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=${CXX_ABI}" \
-  CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} \
-  INTERN_BUILD_ATEN_OPS=OFF \
-  INTERN_DISABLE_ONNX=ON \
-  INTERN_USE_EIGEN_BLAS=ON \
-  MAX_JOBS=${MAX_JOBS} \
-  ONNX_ML=OFF \
-  USE_BREAKPAD=OFF \
-  USE_CUDA=OFF \
-  USE_DISTRIBUTED=OFF \
-  USE_EIGEN_FOR_BLAS=OFF \
-  USE_FBGEMM=OFF \
-  USE_GLOO=OFF \
-  USE_KINETO=OFF \
-  USE_MKL=OFF \
-  USE_MKLDNN=OFF \
-  USE_MPS=OFF \
-  USE_NCCL=OFF \
-  USE_NNPACK=OFF \
-  USE_OBSERVERS=OFF \
-  USE_OPENMP=OFF \
-  USE_PYTORCH_QNNPACK=OFF \
-  USE_QNNPACK=OFF \
-  USE_XNNPACK=OFF \
-  ${PYTHON_BIN} setup.py  bdist_wheel -d "$WHEELHOUSE"
+  cmake \
+  -GNinja -B ${PYTORCH_ROOT}/build
+  -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS} \
+  -DBUILD_CAFFE2_OPS=OFF -DBUILD_PYTHON=True \
+  -DBUILD_TEST=False -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=${CXX_ABI} \
+  -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER} \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER} \
+  -DCMAKE_INSTALL_PREFIX=${PYTORCH_ROOT}/build/torch \
+  -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} \
+  -DONNX_ML=OFF -DUSE_BREAKPAD=OFF -DUSE_CUDA=OFF -DUSE_DISTRIBUTED=OFF \
+  -DUSE_EIGEN_FOR_BLAS=OFF -DUSE_FBGEMM=OFF -DUSE_GLOO=OFF -DUSE_KINETO=OFF -DUSE_MKL=OFF -DUSE_MKLDNN=OFF \
+  -DUSE_MPS=OFF -DUSE_NCCL=OFF -DUSE_NNPACK=OFF -DUSE_NUMPY=True -DUSE_OBSERVERS=OFF \
+  -DUSE_OPENMP=OFF -DUSE_PYTORCH_QNNPACK=OFF -DUSE_QNNPACK=OFF -DUSE_XNNPACK=OFF \
+  -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} \
+  -DNUMPY_INCLUDE_DIR=${NUMPY_INCLUDE_DIR} \
+  -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} \
+  -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} \
+  -DPYTHON_LIBRARY=${PYTHON_LIBRARY} \
+  -DTORCH_BUILD_VERSION=${TORCH_BUILD_VERSION} \
+  ${PYTORCH_ROOT}
+  cmake --build ${PYTORCH_ROOT}/build
 }
 
 package_pytorch() {
